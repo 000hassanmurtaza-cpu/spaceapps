@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mission Architect · Space Mission Design Game</title>
+<style>
+:root{--bg:#0c2340;--pan:#12315a;--ink:#eaf2fc;--mute:#9db7d6;--line:#2f5a8e;--acc:#ffd166;--ok:#7bdcb5;--wr:#ffb454;--bad:#ff7a7a;--grid:rgba(160,200,255,.07);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f3f7fc;--pan:#fff;--ink:#0d2a4a;--mute:#4a6585;--line:#a9c1de;--acc:#9a6700;--ok:#0f7d5a;--wr:#a85a00;--bad:#c2332f;--grid:rgba(13,42,74,.06);color-scheme:light}}
+:root[data-theme="light"]{--bg:#f3f7fc;--pan:#fff;--ink:#0d2a4a;--mute:#4a6585;--line:#a9c1de;--acc:#9a6700;--ok:#0f7d5a;--wr:#a85a00;--bad:#c2332f;--grid:rgba(13,42,74,.06);color-scheme:light}
+:root[data-theme="dark"]{--bg:#0c2340;--pan:#12315a;--ink:#eaf2fc;--mute:#9db7d6;--line:#2f5a8e;--acc:#ffd166;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg) linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px;color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+h1,h2,h3{font-family:Georgia,"Iowan Old Style",serif;margin:0;font-weight:600}
+header{max-width:1200px;margin:auto;padding:20px 18px 8px}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.1}header p{margin:4px 0 0;color:var(--mute)}
+nav{max-width:1200px;margin:auto;padding:8px 18px;display:flex;gap:6px;flex-wrap:wrap}
+nav button{background:var(--pan);color:var(--mute);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font:inherit;cursor:pointer}
+nav button[aria-current="true"]{color:var(--bg);background:var(--acc);border-color:var(--acc);font-weight:600}
+main{max-width:1200px;margin:auto;padding:8px 18px 40px;display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.pan{background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:16px}
+.tip{color:var(--mute);font-size:13.5px;margin:4px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.opt{text-align:left;background:transparent;color:inherit;border:1px solid var(--line);border-radius:8px;padding:12px;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.opt:hover,.opt:focus-visible{border-color:var(--acc);outline:none}.opt[aria-pressed="true"]{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.opt b{font-family:Georgia,serif;font-size:16px}.opt small{color:var(--mute)}
+.sp{display:flex;gap:10px;flex-wrap:wrap;color:var(--mute);font-size:12.5px;font-variant-numeric:tabular-nums}
+label.r{display:block;margin:14px 0 4px;font-size:14px}label.r output{color:var(--acc);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{background:var(--acc);color:var(--bg);border:0;border-radius:6px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
+.btn.g{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+#board{position:sticky;top:10px}#board h3{font-size:18px;margin-bottom:8px}
+.g1{margin:10px 0}.g1 .t{display:flex;justify-content:space-between;font-size:13px;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:color-mix(in srgb,var(--ink) 14%,transparent);border-radius:4px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;border-radius:4px}
+.ok{color:var(--ok)}.wr{color:var(--wr)}.bad{color:var(--bad)}
+.iss{margin:10px 0 0;padding:0;list-style:none;font-size:13px}.iss li{padding:5px 0;border-top:1px solid var(--line)}
+#sim svg{width:100%;height:auto;display:block}
+#log{max-height:260px;overflow:auto;margin-top:10px;font-size:14px}#log div{padding:5px 0;border-top:1px solid var(--line)}
+.res h2{font-size:28px}.stars{font-size:28px;color:var(--acc);letter-spacing:4px}
+ul.ls{padding-left:18px;margin:8px 0}
+</style></head><body>
+<header><h1>Mission Architect</h1><p>Design a spacecraft, fit it inside real limits on mass, power, data and money, then fly it and see what your choices did.</p></header>
+<nav id="nav" aria-label="Design steps"></nav>
+<main><section class="pan" id="panel"></section><aside class="pan" id="board" aria-label="Mission board"></aside></main>
+<script>
+const G0=9.81,$=s=>document.querySelector(s);
+const T=[
+{id:'moon',n:'Lunar polar orbiter',b:'Map ice and minerals at the Moon’s poles.',au:1,comm:1,dv:4.1,days:240,bud:260,goal:80},
+{id:'ast',n:'Near-Earth asteroid rendezvous',b:'Visit a small rocky asteroid and study its surface.',au:1.2,comm:1.4,dv:5.2,days:700,bud:340,goal:75},
+{id:'mars',n:'Mars climate orbiter',b:'Track Mars’s weather, dust and polar caps from orbit.',au:1.5,comm:2.2,dv:4.4,days:900,bud:560,goal:110},
+{id:'jup',n:'Jupiter system orbiter',b:'Study Jupiter and its icy moons, where sunlight is 27 times weaker.',au:5.2,comm:5.2,dv:6.5,days:2200,bud:1300,goal:120}];
+const BUS=[{n:'Small bus',m:80,p:40,c:25},{n:'Medium bus',m:180,p:90,c:60},{n:'Large bus',m:380,p:160,c:120}];
+const EN={chem:{n:'Chemical engine',isp:320,c:10,m:8,d:'Strong thrust, thirsty for propellant (Isp 320 s).'},ion:{n:'Ion engine',isp:3000,c:45,m:25,d:'Sips propellant (Isp 3000 s) but needs 250 W while thrusting and makes the trip 40% longer.'}};
+const INS=[
+{id:'cam',n:'Camera',m:8,p:12,c:12,sci:20,gb:2,a:{moon:1.2,ast:1.2,mars:1,jup:.8}},
+{id:'spec',n:'Spectrometer',m:14,p:25,c:20,sci:30,gb:1,a:{moon:1.3,ast:1.3,mars:1.1,jup:1}},
+{id:'mag',n:'Magnetometer',m:3,p:4,c:5,sci:10,gb:.1,a:{moon:.6,ast:.5,mars:1.1,jup:1.8}},
+{id:'rad',n:'Radar sounder',m:30,p:60,c:35,sci:45,gb:3,a:{moon:1.4,ast:.9,mars:1.3,jup:1.2}},
+{id:'ir',n:'Thermal imager',m:10,p:15,c:15,sci:25,gb:1.5,a:{moon:1,ast:1,mars:1.2,jup:1}},
+{id:'dust',n:'Dust analyzer',m:7,p:8,c:8,sci:15,gb:.2,a:{moon:.8,ast:1.5,mars:.9,jup:.7}}];
+const LA=[{n:'Small launcher',cap:900,c:15,r:.88},{n:'Medium launcher',cap:2800,c:70,r:.94},{n:'Heavy launcher',cap:7500,c:160,r:.96},{n:'Super-heavy launcher',cap:14000,c:330,r:.97}];
+const STEPS=['1 Mission','2 Spacecraft','3 Instruments','4 Launch','5 Fly'];
+let S={t:0,bus:1,sol:6,rtg:0,eng:'chem',prop:400,ant:1,ins:['cam'],L:1,seed:7,step:0},timer=null;
+const f=(n,d=0)=>n.toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+function calc(){const t=T[S.t],b=BUS[S.bus],ins=INS.filter(i=>S.ins.includes(i.id)),L=LA[S.L],e=EN[S.eng];
+const dry=b.m+S.sol*4+S.rtg*45+ins.reduce((s,i)=>s+i.m,0)+6*S.ant**2+S.prop*.1+e.m,wet=dry+S.prop,dv=e.isp*G0*Math.log(wet/dry)/1000;
+const iP=ins.reduce((s,i)=>s+i.p,0),avail=S.sol*120/t.au**2+S.rtg*60,load=b.p+20+iP,gen=ins.reduce((s,i)=>s+i.gb,0),down=6*S.ant**2/t.comm**2;
+const days=t.days*(S.eng==='ion'?1.4:1),cost=b.c+S.sol*.8+S.rtg*60+ins.reduce((s,i)=>s+i.c,0)+3*S.ant**2+e.c+S.prop*.02+L.c+days*.15;
+const ionP=S.sol*120/((1+t.au)/2)**2+S.rtg*60,is=[],A=(l,x)=>is.push({l,x});
+if(!ins.length)A('bad','Add at least one instrument. A spacecraft with nothing to measure returns no science.');
+if(wet>L.cap)A('bad',`Too heavy: ${f(wet)} kg against ${f(L.cap)} kg. Remove propellant or hardware, or pick a bigger launcher.`);
+if(dv<t.dv)A('bad',`Not enough delta-v: ${f(dv,2)} km/s of ${t.dv} needed. Add propellant, cut dry mass, or try the ion engine.`);
+if(S.eng==='ion'&&ionP<250)A('bad',`The ion engine needs 250 W in cruise but you have ${f(ionP)} W. Add solar area or an RTG.`);
+if(avail<b.p+20)A('bad',`Power too low at ${t.au} AU: ${f(avail)} W cannot even run the bus and radio (${b.p+20} W). Sunlight fades with distance squared.`);
+if(cost>t.bud)A('bad',`Over budget by $${f(cost-t.bud)}M. Cut cost or choose a cheaper launcher.`);
+if(!is.some(x=>x.l==='bad')){if(dv<t.dv*1.08)A('wr','Delta-v margin under 8%. A trajectory correction could strand you.');
+if(avail<load)A('wr',`Instruments will be duty-cycled: ${f(avail)} W available, ${f(load)} W wanted.`);else if(avail<load*1.2)A('wr','Power margin under 20%. A solar flare could force cutbacks.');
+if(down<gen)A('wr',`Downlink ${f(down,1)} Gb/day is below the ${f(gen,1)} Gb/day your instruments make. Some data will be lost. Try a bigger dish.`);}
+return{t,b,ins,L,e,dry,wet,dv,avail,load,gen,down,cost,days,iP,is,bad:is.some(x=>x.l==='bad')}}
+function gauge(n,v,max,u,good,d=0){const p=Math.min(100,v/max*100),c=good(v)?'var(--ok)':'var(--bad)';return `<div class="g1"><div class="t"><span>${n}</span><span>${f(v,d)} / ${f(max,d)} ${u}</span></div><div class="bar"><i style="width:${p}%;background:${c}"></i></div></div>`}
+function board(){const c=calc();$('#board').innerHTML=`<h3>Mission board</h3>`+
+gauge('Launch mass',c.wet,c.L.cap,'kg',v=>v<=c.L.cap)+gauge('Delta-v',c.dv,c.t.dv*1.3,'km/s',v=>v>=c.t.dv,2).replace(/ \/ [\d.,]+ km\/s/,`: need ${c.t.dv} km/s`)+
+gauge('Power at target',c.avail,Math.max(c.load,c.avail),'W',v=>v>=c.load).replace(/ \/ [\d.,]+ W/,` vs ${f(c.load)} W load`)+
+gauge('Data return',Math.min(c.down,c.gen||1),c.gen||1,'Gb/day',v=>v>=c.gen*.99,1).replace(/ \/ [\d.,]+ Gb\/day/,` of ${f(c.gen,1)} made`)+
+gauge('Cost',c.cost,c.t.bud,'$M',v=>v<=c.t.bud)+`<ul class="iss">${c.is.length?c.is.map(i=>`<li class="${i.l}">${i.l==='bad'?'Blocker: ':'Watch: '}${i.x}</li>`).join(''):'<li class="ok">All checks pass. Ready to fly.</li>'}</ul>`}
+function nav(){$('#nav').innerHTML=STEPS.map((s,i)=>`<button data-s="${i}" ${i===S.step?'aria-current="true"':''}>${s}</button>`).join('');$('#nav').querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.s))}
+function go(i){clearInterval(timer);S.step=i;nav();draw()}
+const opt=(on,pr,t,s,x)=>`<button class="opt" aria-pressed="${on}" data-p="${pr}"><b>${t}</b><small>${s}</small><span class="sp">${x}</span></button>`;
+function slider(k,l,min,max,st,u,tip){return `<label class="r">${l}: <output id="o_${k}">${f(S[k],st<1?1:0)} ${u}</output><input type="range" data-k="${k}" min="${min}" max="${max}" step="${st}" value="${S[k]}"></label><div class="tip">${tip}</div>`}
+const nxt=()=>`<div class="row">${S.step>0?`<button class="btn g" data-go="${S.step-1}">Back</button>`:''}<button class="btn" data-go="${S.step+1}">${S.step===3?'Go to flight':'Next step'}</button></div>`;
+function draw(){const P=$('#panel'),c=calc();let h='';
+if(S.step===0)h=`<h2>Choose your mission</h2><p class="tip">The target sets how far you travel, how much speed change (delta-v) you need, how weak the sunlight is, how slow the radio link is, and how much money you get.</p><div class="grid">${T.map((t,i)=>opt(S.t===i,'t'+i,t.n,t.b,`${t.au} AU · ${t.dv} km/s · $${t.bud}M`)).join('')}</div>`+nxt();
+if(S.step===1)h=`<h2>Build the spacecraft</h2><p class="tip">Every kilogram needs propellant to move it, and propellant is mass too. That loop is the rocket equation.</p><h3>Bus</h3><div class="grid">${BUS.map((b,i)=>opt(S.bus===i,'b'+i,b.n,`${b.m} kg dry · draws ${b.p} W`,`$${b.c}M`)).join('')}</div>
+<h3 style="margin-top:16px">Engine</h3><div class="grid">${Object.entries(EN).map(([k,e])=>opt(S.eng===k,'e'+k,e.n,e.d,`$${e.c}M`)).join('')}</div>
+${slider('prop','Propellant',0,8000,10,'kg','More propellant gives more delta-v, but the launcher has a mass limit.')}
+${slider('sol','Solar panels',0,60,1,'m²','Makes 120 W per m² at Earth’s distance and falls with the square of distance from the Sun.')}
+${slider('rtg','Nuclear power units (RTG)',0,6,1,'','60 W each at any distance, 45 kg, $60M. Essential far from the Sun.')}
+${slider('ant','Antenna dish',.5,3,.1,'m','Bigger dishes send more data home, but weigh and cost more. Signal weakens with distance squared.')}`+nxt();
+if(S.step===2)h=`<h2>Pick instruments</h2><p class="tip">Science points depend on the target: a magnetometer shines at Jupiter, a radar sounder at the Moon. Each also costs mass, power and data volume.</p><div class="grid">${INS.map(i=>opt(S.ins.includes(i.id),'i'+i.id,i.n,`Science ${Math.round(i.sci*i.a[T[S.t].id])} at this target`,`${i.m} kg · ${i.p} W · ${i.gb} Gb/day · $${i.c}M`)).join('')}</div>`+nxt();
+if(S.step===3)h=`<h2>Select a launch vehicle</h2><p class="tip">Your spacecraft’s fueled mass is <b>${f(c.wet)} kg</b>. Bigger rockets lift more and fail less often, but cost far more.</p><div class="grid">${LA.map((l,i)=>opt(S.L===i,'l'+i,l.n,`Lifts ${f(l.cap)} kg`,`$${l.c}M · ${Math.round(l.r*100)}% reliable`)).join('')}</div>`+nxt();
+if(S.step===4)h=`<h2>Flight: ${c.t.n}</h2><div id="sim"></div>`;
+P.innerHTML=h;board();
+P.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const p=b.dataset.p,k=p[0],v=p.slice(1);
+if(k==='t'){S.t=+v;S.prop=Math.min(S.prop,8000);if(+v===3&&!S.rtg){S.rtg=4}}if(k==='b')S.bus=+v;if(k==='e')S.eng=v;if(k==='l')S.L=+v;
+if(k==='i')S.ins=S.ins.includes(v)?S.ins.filter(x=>x!==v):[...S.ins,v];draw()});
+P.querySelectorAll('input[data-k]').forEach(r=>r.oninput=()=>{S[r.dataset.k]=+r.value;const u={prop:'kg',sol:'m²',rtg:'',ant:'m'}[r.dataset.k];$('#o_'+r.dataset.k).textContent=f(+r.value,r.dataset.k==='ant'?1:0)+' '+u;board()});
+P.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(+b.dataset.go));
+if(S.step===4)setupSim(c)}
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function setupSim(c){$('#sim').innerHTML=`<div class="pan" style="background:transparent"><svg viewBox="0 0 700 170" role="img" aria-label="Mission trajectory"><circle cx="50" cy="85" r="20" fill="#3b82c4"/><text x="50" y="125" text-anchor="middle" fill="var(--mute)" font-size="13">Earth</text><circle cx="650" cy="85" r="${c.t.id==='jup'?26:12}" fill="var(--wr)"/><text x="650" y="125" text-anchor="middle" fill="var(--mute)" font-size="13">${c.t.id==='jup'?'Jupiter':c.t.id==='mars'?'Mars':c.t.id==='moon'?'Moon':'Asteroid'}</text><path d="M70 85 Q360 -20 630 85" fill="none" stroke="var(--line)" stroke-dasharray="5 5" stroke-width="2"/><path id="trail" d="" fill="none" stroke="var(--acc)" stroke-width="3"/><circle id="sc" cx="70" cy="85" r="6" fill="var(--acc)"/></svg><div id="log" aria-live="polite"></div><div id="res"></div><div class="row"><button class="btn" id="go">Launch mission</button></div></div>`;$('#go').onclick=()=>run(c)}
+function run(c){clearInterval(timer);$('#go').textContent='Fly again with new luck';const R=rng(S.seed=S.seed*7+13),ev=[],t=c.t;let ok=true,prog=0,sciK=1,pw=c.avail,cut='';
+const E=(x,k,p)=>ev.push({x,k:k||'',p:p??prog});
+if(c.bad){E('Pre-flight review failed. Launch scrubbed.','bad',0);c.is.filter(i=>i.l==='bad').forEach(i=>E(i.x,'bad',0));ok=false}
+else{E(`Fueled mass ${f(c.wet)} kg stacked on the ${c.L.n.toLowerCase()}. Countdown.`,'',0);
+if(R()>c.L.r){E('The launcher fails during ascent. The mission is lost.','bad',.03);ok=false;cut='launch'}
+else{E('Liftoff. Orbit achieved.','ok',.05);prog=.3;E(`Cruise: ${f(c.days*.3)} days out, speed building.`,'',.3);
+if(R()<.3){if(c.avail>c.load*1.2)E('Solar flare hits. Your power margin absorbs it.','ok',.4);else{pw*=.85;E('Solar flare degrades the panels by 15%. Power margin was thin.','wr',.4)}}
+if(R()<.4){const need=.2;if(c.dv-t.dv>=need)E('Mid-course correction needed. Spare delta-v covers it.','ok',.55);else{E('Mid-course correction needed, but there is not enough spare delta-v. Orbit insertion fails.','bad',.55);ok=false;cut='dv'}}
+if(ok){if(R()<.25){sciK*=.9;E('A comms glitch costs about 10% of the data.','wr',.7)}
+E(`Orbit insertion burn at ${t.n.split(' ')[0]}. Captured.`,'ok',.85);E('Science operations begin.','',.9)}}}
+let sci=0,duty=1,ret=1;if(ok){duty=Math.min(1,Math.max(0,(pw-c.b.p-20)/c.iP));ret=Math.min(1,c.down/c.gen);sci=c.ins.reduce((s,i)=>s+i.sci*i.a[t.id],0)*duty*ret*sciK;
+if(pw<c.b.p+20){ok=false;E('Power falls below survival level. The spacecraft goes into permanent safe mode.','bad',.95)}else{E(`Instruments ran ${Math.round(duty*100)}% of the time and ${Math.round(ret*100)}% of the data reached Earth.`,'',.97);E(`Science score ${f(sci)} against a goal of ${t.goal}.`,sci>=t.goal?'ok':'wr',1)}}
+let i=0;$('#log').innerHTML='';$('#res').innerHTML='';$('#go').disabled=true;
+timer=setInterval(()=>{if(i>=ev.length){clearInterval(timer);$('#go').disabled=false;result(c,ok,sci,duty,ret,cut);return}
+const e=ev[i++];$('#log').insertAdjacentHTML('beforeend',`<div class="${e.k}">${e.x}</div>`);$('#log').scrollTop=1e5;
+const x=70+560*e.p,y=85-Math.sin(Math.PI*e.p)*55;$('#sc').setAttribute('cx',x);$('#sc').setAttribute('cy',y);const tr=$('#trail');tr.setAttribute('d',(tr.getAttribute('d')||`M70 85`)+` L${x} ${y}`)},900)}
+function result(c,ok,sci,duty,ret,cut){const t=c.t,fund=c.cost<=t.bud,st=!ok?0:sci>=t.goal*1.4?3:sci>=t.goal?2:sci>=t.goal*.5?1:0,L=[];
+if(!ok&&c.bad)L.push('Check the mission board before launching: any red blocker scrubs the mission.');
+if(cut==='launch')L.push('Launch reliability is real. Bigger vehicles fail less, but each step up costs far more.');
+if(cut==='dv')L.push('Delta-v margin is insurance. Leave 8% or more for course corrections.');
+if(ok&&duty<1)L.push('Power limited your science. Sunlight falls with distance squared, so far targets need RTGs or fewer instruments.');
+if(ok&&ret<1)L.push('Data was the bottleneck: instruments made more than the antenna could send. Add a bigger dish or fewer high-rate instruments.');
+if(ok&&sci<t.goal)L.push('Pick instruments with high science for this target (check the score shown on the instrument cards).');
+if(ok&&c.dv>t.dv*1.4)L.push('You carry more propellant than needed. Every extra kilogram of fuel also needs more launcher.');
+if(ok&&c.cost<t.bud*.6)L.push('You left a lot of budget unused. Spend it on a better instrument or a bigger dish.');
+if(!L.length)L.push('Well balanced. Try a harder target, or the ion engine for a different trade.');
+$('#res').innerHTML=`<div class="pan res"><h2 class="${ok?'ok':'bad'}">${ok?(st>=2?'Mission success':'Mission survived, limited science'):'Mission failed'}</h2><div class="stars" aria-label="${st} of 3 stars">${'★'.repeat(st)}${'☆'.repeat(3-st)}</div><p>Science ${f(sci)} of ${t.goal} goal · Cost $${f(c.cost)}M of $${t.bud}M${fund?'':' (over budget)'}</p><h3>Debrief</h3><ul class="ls">${L.map(x=>`<li>${x}</li>`).join('')}</ul></div>`}
+nav();draw();
+</script></body></html>
